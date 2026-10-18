@@ -1,9 +1,7 @@
 package utils
 
 import (
-	"net"
 	"net/http"
-	"os"
 	"time"
 
 	"hubproxy/config"
@@ -18,41 +16,31 @@ var (
 func InitHTTPClients() {
 	cfg := config.GetConfig()
 
-	if p := cfg.Access.Proxy; p != "" {
-		os.Setenv("HTTP_PROXY", p)
-		os.Setenv("HTTPS_PROXY", p)
-	}
+	globalPolicy := newEgressPolicy(cfg, 30*time.Second)
+	searchPolicy := newEgressPolicy(cfg, 5*time.Second)
 
 	globalHTTPClient = &http.Client{
-		Transport: &http.Transport{
-			Proxy: http.ProxyFromEnvironment,
-			DialContext: (&net.Dialer{
-				Timeout:   30 * time.Second,
-				KeepAlive: 30 * time.Second,
-			}).DialContext,
+		Transport: &guardedTransport{policy: globalPolicy, next: &http.Transport{
+			DialContext:           globalPolicy.dialContext,
 			MaxIdleConns:          1000,
 			MaxIdleConnsPerHost:   1000,
 			IdleConnTimeout:       90 * time.Second,
 			TLSHandshakeTimeout:   10 * time.Second,
 			ExpectContinueTimeout: 1 * time.Second,
 			ResponseHeaderTimeout: 300 * time.Second,
-		},
+		}},
 	}
 
 	searchHTTPClient = &http.Client{
 		Timeout: 10 * time.Second,
-		Transport: &http.Transport{
-			Proxy: http.ProxyFromEnvironment,
-			DialContext: (&net.Dialer{
-				Timeout:   5 * time.Second,
-				KeepAlive: 30 * time.Second,
-			}).DialContext,
+		Transport: &guardedTransport{policy: searchPolicy, next: &http.Transport{
+			DialContext:         searchPolicy.dialContext,
 			MaxIdleConns:        100,
 			MaxIdleConnsPerHost: 10,
 			IdleConnTimeout:     90 * time.Second,
 			TLSHandshakeTimeout: 5 * time.Second,
 			DisableCompression:  false,
-		},
+		}},
 	}
 }
 

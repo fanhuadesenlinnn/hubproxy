@@ -16,6 +16,9 @@ requestLimit = 500
 periodHours = 3.0
 
 [security]
+# Extra trusted public upstream hosts (exact names or *.example.com). Private,
+# loopback and metadata IPs remain blocked even for an allowed hostname.
+allowedHosts = []
 # IP白名单，支持单个IP或IP段
 # 白名单中的IP不受限流限制
 whiteList = [
@@ -46,7 +49,10 @@ blackList = [
 # 代理配置，支持有用户名/密码认证和无认证模式
 # 无认证: socks5://127.0.0.1:1080
 # 有认证: socks5://username:password@127.0.0.1:1080
-# 留空不使用代理
+# 留空时读取环境代理配置；无环境配置时直连。
+# 留空时仍遵循 HTTPS_PROXY/https_proxy 和 NO_PROXY/no_proxy。
+# 代理连接使用经过校验的目标 IP；本地 DNS 不可用时，通过代理向固定
+# Cloudflare DoH 端点解析，再校验全部 A/AAAA 地址，避免代理端 DNS 重绑定。
 proxy = "" 
 
 [download]

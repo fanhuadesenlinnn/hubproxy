@@ -1,0 +1,11 @@
+FROM alpine:3.21
+ARG TARGETARCH
+ARG GIT_COMMIT=unknown
+LABEL org.opencontainers.image.source="https://github.com/fanhuadesenlinnn/hubproxy" \
+      org.opencontainers.image.revision=$GIT_COMMIT
+RUN apk add --no-cache ca-certificates
+WORKDIR /app
+COPY --chmod=755 dist/hubproxy-linux-${TARGETARCH} /app/hubproxy
+COPY src/config.toml /app/config.toml
+EXPOSE 5000
+ENTRYPOINT ["/app/hubproxy"]

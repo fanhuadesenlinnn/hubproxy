@@ -35,8 +35,9 @@ type AppConfig struct {
 	} `toml:"rateLimit"`
 
 	Security struct {
-		WhiteList []string `toml:"whiteList"`
-		BlackList []string `toml:"blackList"`
+		WhiteList    []string `toml:"whiteList"`
+		BlackList    []string `toml:"blackList"`
+		AllowedHosts []string `toml:"allowedHosts"`
 	} `toml:"security"`
 
 	Access struct {
@@ -91,8 +92,9 @@ func DefaultConfig() *AppConfig {
 			PeriodHours:  3.0,
 		},
 		Security: struct {
-			WhiteList []string `toml:"whiteList"`
-			BlackList []string `toml:"blackList"`
+			WhiteList    []string `toml:"whiteList"`
+			BlackList    []string `toml:"blackList"`
+			AllowedHosts []string `toml:"allowedHosts"`
 		}{
 			WhiteList: []string{},
 			BlackList: []string{},
