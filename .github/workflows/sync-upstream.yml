@@ -1,0 +1,50 @@
+name: Force Sync Fork
+
+on:
+  schedule:
+    - cron: '23 */3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: force-sync-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout fork
+        uses: actions/checkout@v4
+        with:
+          ref: 'main'
+          fetch-depth: 1
+      - name: Replace fork branch with upstream while preserving this workflow
+        shell: bash
+        env:
+          UPSTREAM_REPOSITORY: 'sky22333/hubproxy'
+          UPSTREAM_BRANCH: 'main'
+          FORK_BRANCH: 'main'
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          original_sha="$(git rev-parse HEAD)"
+          original_tree="$(git rev-parse HEAD^{tree})"
+          cp .github/workflows/sync-upstream.yml "$RUNNER_TEMP/sync-upstream.yml"
+          git remote add upstream "https://github.com/${UPSTREAM_REPOSITORY}.git"
+          git fetch --no-tags --depth=1 upstream "${UPSTREAM_BRANCH}"
+          git reset --hard FETCH_HEAD
+          mkdir -p .github/workflows
+          cp "$RUNNER_TEMP/sync-upstream.yml" .github/workflows/sync-upstream.yml
+          git add -- .github/workflows/sync-upstream.yml
+          if [[ "$(git write-tree)" == "$original_tree" ]]; then
+            echo 'No upstream changes; nothing to push.'
+            exit 0
+          fi
+          if ! git diff --cached --quiet; then
+            git commit -m "chore: force sync fork with ${UPSTREAM_REPOSITORY}:${UPSTREAM_BRANCH}"
+          fi
+          git push --force-with-lease="refs/heads/${FORK_BRANCH}:${original_sha}" origin "HEAD:refs/heads/${FORK_BRANCH}"
